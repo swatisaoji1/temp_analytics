@@ -8,12 +8,8 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.ge.predix.solsvc.restclient.impl.RestClient;
 
 /*
  * {"id":88319,"dt":1345284000,"name":"Benghazi",
@@ -75,15 +71,16 @@ public class WeatherRestClient {
 
 			BufferedReader br = new BufferedReader(new InputStreamReader(
 					(conn.getInputStream())));
-
+			StringBuilder sb = new StringBuilder();
 			String output;
 			System.out.println("Output from Server .... \n");
 			while ((output = br.readLine()) != null) {
-				System.out.println(output);
+				sb.append(output);
+				// System.out.println(output);
 
 			}
 			conn.disconnect();
-			return br.toString();
+			return sb.toString();
 		} catch (ProtocolException e) {
 			log.error(e.getMessage() + e.getStackTrace());
 			e.printStackTrace();

@@ -18,6 +18,8 @@ import org.apache.http.Header;
 import org.apache.http.client.entity.GzipDecompressingEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -185,8 +187,28 @@ public class WindDataImpl implements WindDataAPI {
 
 	private double getEvaporationRate(){
 		//TODO call weather api to get the evaporation rate and
+		WeatherRestClient wc = new WeatherRestClient();
+		String weatherData = wc.getWetherInformation("San%20Francisco");
+		System.out.println(weatherData);
+		double temp = 70;
+		double humidity = 50;
+		double windSpeed = 2;
+		try {
+			JSONObject json = new JSONObject(weatherData);
+			temp = json.getJSONObject("main").getDouble("temp");
+			humidity = json.getJSONObject("main").getDouble("humidity");
+			windSpeed = json.getJSONObject("wind").getDouble("speed");
+			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		//calculate evaporation per 10 minutes
-		return 1.1;
+		System.out.println("temperature : " + temp);
+		double hourlyEvaporation = temp * windSpeed /humidity;
+		System.out.println("Rate : " + hourlyEvaporation/6);
+		// return moisture loss for 10 minutes
+		return hourlyEvaporation / 6;
 	}
 	
 	
