@@ -28,7 +28,8 @@ import org.slf4j.LoggerFactory;
 
 public class WeatherRestClient {
 
-	final String  WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather";
+	final String  WEATHER_URL = "http://api.openweathermap.org/data/2.5/";
+	
 	final String API_KEY = "4fda58913e5b362e345f684ec484c4d7";		
 	private static Logger log = LoggerFactory.getLogger(WeatherRestClient.class);
 	
@@ -39,22 +40,30 @@ public class WeatherRestClient {
 		JSONObject obj = new JSONObject(response);
 			}*/
 
-	private String getURL(String city) {
+	private String getURL(String city,String type) {
 		StringBuilder builder = new StringBuilder();
-		builder.append(WEATHER_URL);
+		builder.append(WEATHER_URL + type);
 		builder.append("?");
 		builder.append("APPID=" + API_KEY);
 		builder.append("&q=" + city);
+		if(type.equals("forecast"))
+			builder.append("&cnt=1");
 		System.out.println(builder.toString());
 		return builder.toString();
 	}
 	
+	public String getCurrentWeatherInformation(String city){
+		return getWetherInformation(city,"weather" );
+	}
+	public String getForcastWeatherInformation(String city){
+		return getWetherInformation(city,"forecast" );
+	}
 	// method to return weather information by city
-	public  String getWetherInformation(String city) {
+	private  String getWetherInformation(String city,String type) {
 
 		try {
 
-			URL url = new URL(getURL(city));
+			URL url = new URL(getURL(city,type));
 			// Open a new connection for the passed URL
 			HttpURLConnection conn = null;
 			conn = (HttpURLConnection) url.openConnection();
