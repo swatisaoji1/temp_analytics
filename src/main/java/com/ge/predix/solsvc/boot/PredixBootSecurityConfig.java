@@ -1,4 +1,4 @@
-package com.ge.predix.solsvc.boot;
+                                   package com.ge.predix.solsvc.boot;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

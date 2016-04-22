@@ -15,8 +15,19 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
+import org.apache.http.HeaderElement;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.ParseException;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.entity.GzipDecompressingEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.conn.ClientConnectionManager;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.params.HttpParams;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -26,6 +37,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ge.predix.solsvc.api.WindDataAPI;
 import com.ge.predix.solsvc.restclient.impl.CxfAwareRestClient;
 import com.ge.predix.solsvc.spi.IServiceManagerService;
@@ -35,6 +48,7 @@ import com.ge.predix.solsvc.timeseries.bootstrap.factories.TimeseriesFactory;
 import com.ge.predix.solsvc.timeseries.bootstrap.websocket.client.TimeseriesWebsocketClient;
 import com.ge.predix.timeseries.entity.datapoints.ingestionrequest.Body;
 import com.ge.predix.timeseries.entity.datapoints.ingestionrequest.DatapointsIngestion;
+import com.ge.predix.timeseries.entity.datapoints.queryrequest.Attribute;
 import com.ge.predix.timeseries.entity.datapoints.queryrequest.DatapointsQuery;
 import com.ge.predix.timeseries.entity.datapoints.queryrequest.latest.DatapointsLatestQuery;
 import com.ge.predix.timeseries.entity.datapoints.queryresponse.DatapointsResponse;
@@ -65,9 +79,12 @@ public class WindDataImpl implements WindDataAPI {
 	private TimeseriesFactory timeseriesFactory;
 
 	private static Logger log = LoggerFactory.getLogger(WindDataImpl.class);
-
+	
+	
+	private AnalyticAPI aAPI = new AnalyticAPI();
 	private final long SLEEP_PERIOD_SPRINKLER_OFF = 1000 * 60 *10 ;
 	private final long SLEEP_PERIOD_SPRINKLER_ON = 1000 * 10 * 2;
+	private final long SLEEP_PERIOD_DAY = 1000 * 60 * 60 * 24;
 
 	/**
 	 * -
@@ -76,82 +93,150 @@ public class WindDataImpl implements WindDataAPI {
 		super();
 	}
 
-	
-
 	/**
 	 * -
 	 */
 	@PostConstruct
 	public void init() {
 		this.serviceManagerService.createRestWebService(this, null);
-		createMetrics();
-	}
-
-	@Override
-	public Response greetings() {
-		return handleResult("Greetings from CXF Bean Rest Service " + new Date()); //$NON-NLS-1$
-	}
-
-	@Override
-	public Response getYearlyWindDataPoints(String id, String authorization,
-			String starttime, String taglimit, String tagorder) {
-		if (id == null) {
-			return null;
+		//createMetrics();
+		while(true){
+			call_analytics();
+			try {
+				Thread.sleep(SLEEP_PERIOD_DAY);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
-
-		List<Header> headers = generateHeaders();
-
-		DatapointsQuery dpQuery = buildDatapointsQueryRequest(id, starttime,
-				getInteger(taglimit), tagorder);
-		DatapointsResponse response = this.timeseriesFactory
-				.queryForDatapoints(this.timeseriesRestConfig.getBaseUrl(),
-						dpQuery, headers);
-		log.debug(response.toString());
-
-		return handleResult(response);
+		
 	}
 
-	/**
-	 * 
-	 * @param s
-	 *            -
-	 * @return
-	 */
-	private int getInteger(String s) {
-		int inValue = 25;
+	@SuppressWarnings({ "nls", "unchecked" })
+	private void call_analytics() {
+		System.out.println("*************Analytics *********************");
+		String moistureData = getMoistureData();
+		//String moistureData = "{\r\n  \"tags\": [\r\n    {\r\n      \"name\": \"Soil-Moisture\",\r\n      \"results\": [\r\n        {\r\n          \"groups\": [\r\n            {\r\n              \"name\": \"type\",\r\n              \"type\": \"number\"\r\n            }\r\n          ],\r\n          \"attributes\": {\r\n            \"Lawn-Type\": [\r\n              \"Cox-Statidium\",\r\n              \"Malony-Field-CS3000\",\r\n              \"Malony-Field-ET2000e\",\r\n              \"West-Campus-Green\"\r\n            ]\r\n          },\r\n          \"values\": [\r\n            [\r\n              1429479623405,\r\n              27,\r\n              3\r\n            ],\r\n            [\r\n              1429491296221,\r\n              27,\r\n              3\r\n            ],\r\n            [\r\n              1429497287773,\r\n              27,\r\n              3\r\n            ],\r\n            [\r\n              1429520487559,\r\n              27,\r\n              3\r\n            ],\r\n            [\r\n              1429532416657,\r\n              27,\r\n              3\r\n            ],\r\n            [\r\n              1429540945752,\r\n              27,\r\n              3\r\n            ],\r\n            [\r\n              1429558997391,\r\n              27,\r\n              3\r\n            ],\r\n            [\r\n              1429596812204,\r\n              27,\r\n              3\r\n            ],\r\n            [\r\n              1429610829943,\r\n              27,\r\n              3\r\n            ],\r\n            [\r\n              1429641721921,\r\n              27,\r\n              3\r\n            ]\r\n          ]\r\n        }\r\n      ],\r\n      \"stats\": {\r\n        \"rawCount\": 10\r\n      }\r\n    }\r\n  ]\r\n}";
+		//String moistureData = "{\"number1\":1,\"number2\":2}";
+		System.out.println(moistureData);
+		List<Header> headers = generateAnalyticHeaders();
+		System.out.println(headers.toString());
+		
+		String url = this.aAPI.getRunAnalyticURI();
+		System.out.println(url);
+		CloseableHttpResponse response = this.restClient.post(url, moistureData, headers);
+		HttpEntity responseEntity = response.getEntity();
+		
+		 if (responseEntity != null) {
+	           String retSrc;
+			try {
+				retSrc = EntityUtils.toString(responseEntity);
+				// parsing JSON
+	            JSONObject result = new JSONObject(retSrc); //Convert String to JSON Object
+	            System.out.println(result.toString());
+	            String resultEntry = result.getString("result");
+	            double stats = getStatAsInt(resultEntry);
+	            insertInTimeSeries(stats);
+	            
+	            
+	           	System.out.println("=========================");
+	   			System.out.println(resultEntry.toString());
+	   			System.out.println("=========================");
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} 
+	           
+	   		
+	        }
+		//poll for the results from run analytics
+		
+		
+		
+	}
+	
+	private void insertInTimeSeries(double stats) {
+		Body body = new Body();
+		body.setName("Statistics");
+		
+		//create datapoint
+		long timestamp = System.currentTimeMillis();
+		List<Object> datapoint1 = new ArrayList<Object>();
+		datapoint1.add(timestamp);
+		datapoint1.add(stats);
+		datapoint1.add(2); // quality
+		
+		List<Object> datapoints = new ArrayList<Object>();
+		datapoints.add(datapoint1);
+		body.setDatapoints(datapoints);
+		
+		DatapointsIngestion dpIngestion = new DatapointsIngestion();
+		dpIngestion.setMessageId(String.valueOf(System.currentTimeMillis()));
+
+		List<Body> bodies = new ArrayList<Body>();
+		bodies.add(body);
+		dpIngestion.setBody(bodies);
+		this.timeseriesFactory.create(dpIngestion);
+		System.out.println("Data Entered");
+		
+		
+	}
+
+	private double getStatAsInt(String resultEntry) {
+		// TODO Auto-generated method stub
+		String[] splitArr = resultEntry.split(":");
+		double stat = Double.parseDouble(splitArr[1].substring(0,splitArr[1].length()-1));
+		return stat;
+	}
+
+	private String getMoistureData(){
+		List<Header> headers = generateHeaders();
+		DatapointsQuery dq = buildDatapointsQueryRequest("Soil-Moisture",
+				"48h-ago","24h-ago", 10000, "desc");
+		DatapointsResponse response = this.timeseriesFactory.queryForDatapoints(this.timeseriesRestConfig.getBaseUrl(),
+				dq, headers);
+		ObjectMapper mapper = new ObjectMapper();
+		String moistureDataJson = "";
 		try {
-			inValue = Integer.parseInt(s);
-
-		} catch (NumberFormatException ex) {
-			// s is not an integer
+			moistureDataJson = mapper.writeValueAsString(response);
+		} catch (JsonProcessingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		return inValue;
+		return moistureDataJson;
+		//System.out.println(moistureDataJson);
 	}
+	
 
-	@Override
-	public Response getLatestWindDataPoints(String id, String authorization) {
-		if (id == null) {
-			return null;
-		}
-		List<Header> headers = generateHeaders();
 
-		DatapointsLatestQuery dpQuery = buildLatestDatapointsQueryRequest(id);
-		DatapointsResponse response = this.timeseriesFactory
-				.queryForLatestDatapoint(
-						this.timeseriesRestConfig.getBaseUrl(), dpQuery,
-						headers);
-		log.debug(response.toString());
-
-		return handleResult(response);
-	}
 
 	@SuppressWarnings({ "unqualified-field-access", "nls" })
 	private List<Header> generateHeaders() {
 		List<Header> headers = this.restClient.getSecureTokenForClientId();
+		String zoneId = this.timeseriesRestConfig.getZoneId();
+		
+		
 		this.restClient.addZoneToHeaders(headers,
 				this.timeseriesRestConfig.getZoneId());
 		return headers;
 	}
+	
+	@SuppressWarnings({ "unqualified-field-access", "nls" })
+	private List<Header> generateAnalyticHeaders() {
+		List<Header> headers = this.restClient.getSecureTokenForClientId();
+		Header contentType = new BasicHeader("content-type", "application/json");
+		headers.add(contentType);
+		String zoneId = aAPI.getANALYTIC_ZONE_ID();
+		this.restClient.addZoneToHeaders(headers,zoneId);
+		return headers;
+	}
+	
 
 	private DatapointsLatestQuery buildLatestDatapointsQueryRequest(String id) {
 		DatapointsLatestQuery datapointsLatestQuery = new DatapointsLatestQuery();
@@ -172,190 +257,46 @@ public class WindDataImpl implements WindDataAPI {
 	 * @return
 	 */
 	private DatapointsQuery buildDatapointsQueryRequest(String id,
-			String startDuration, int taglimit, String tagorder) {
+			String startDuration,String endDuration, int taglimit, String tagorder) {
 		DatapointsQuery datapointsQuery = new DatapointsQuery();
 		List<com.ge.predix.timeseries.entity.datapoints.queryrequest.Tag> tags = new ArrayList<com.ge.predix.timeseries.entity.datapoints.queryrequest.Tag>();
 		datapointsQuery.setStart(startDuration);
+		datapointsQuery.setEnd(endDuration);
+		
 		//datapointsQuery.setStart("1y-ago"); //$NON-NLS-1$
 		String[] tagArray = id.split(","); //$NON-NLS-1$
 		List<String> entryTags = Arrays.asList(tagArray);
 
 		for (String entryTag : entryTags) {
+			com.ge.predix.timeseries.entity.datapoints.queryrequest.Filters filters = new com.ge.predix.timeseries.entity.datapoints.queryrequest.Filters();
+			
+			List<Attribute> attributes = new ArrayList<Attribute>();
+			Attribute attr = new Attribute();
+			
+			List<String> host = new ArrayList<String>();
+			host.add("ON");
+			
+			attr.setHost(host);
+			attributes.add(attr);
+			
+			filters.setAttributes(attributes);
+			
 			com.ge.predix.timeseries.entity.datapoints.queryrequest.Tag tag = new com.ge.predix.timeseries.entity.datapoints.queryrequest.Tag();
 			tag.setName(entryTag);
 			tag.setLimit(taglimit);
 			tag.setOrder(tagorder);
+			//tag.setFilters(filters);
 			tags.add(tag);
 		}
-		datapointsQuery.setTags(tags);
+		DatapointsQuery datapointsQuery2 = datapointsQuery;
+		datapointsQuery2.setTags(tags);
 		return datapointsQuery;
 	}
 
-	private double getEvaporationRate(WeatherInformation weatherInformation) {
-		// TODO call weather api to get the evaporation rate and
-		// calculate evaporation per 10 minutes
-		// System.out.println("temperature : " + temp);
-		double hourlyEvaporation = weatherInformation.getTemp()
-				* weatherInformation.getWindSpeed()
-				/ weatherInformation.getHumidity();
-		System.out.println("Rate : " + hourlyEvaporation / 6);
-		// return moisture loss for 10 minutes
-		return hourlyEvaporation / 6;
-	}
-
-	/*
-	 * {"coord":{"lon":-122.42,"lat":37.77},"weather":[{"id":803,"main":"Clouds",
-	 * "description"
-	 * :"broken clouds","icon":"04n"}],"base":"cmc stations","main":
-	 * {"temp":292.5
-	 * ,"pressure":1013,"humidity":55,"temp_min":289.15,"temp_max":299.15
-	 * },"wind"
-	 * :{"speed":3.6,"deg":270},"clouds":{"all":75},"dt":1461203760,"sys"
-	 * :{"type"
-	 * :1,"id":478,"message":0.0055,"country":"US","sunrise":1461245127,"sunset"
-	 * :1461293495},"id":5391959,"name":"San Francisco","cod":200} {"city":
-	 * {"id":5391959, "name":"San Francisco",
-	 * "coord":{"lon":-122.419418,"lat":37.774929},
-	 * "country":"US","population":0, "sys":{"population":0 } }, "cod":"200",
-	 * "message":0.0109, "cnt":1, "list":[ {"dt":1461218400,' "main":
-	 * {"temp":288.14
-	 * ,"temp_min":284.991,"temp_max":288.14,"pressure":1020.09,"sea_level"
-	 * :1028.26,"grnd_level":1020.09,"humidity":98,"temp_kf":3.15},
-	 * "weather":[{"id"
-	 * :500,"main":"Rain","description":"light rain","icon":"10n"}],
-	 * "clouds":{"all":32}, "wind":{"speed":1.81,"deg":234.5},
-	 * "rain":{"3h":0.02}, "sys":{"pod":"n"}, "dt_txt":"2016-04-21 06:00:00"}]}
-	 */
-
-	private double getForecastRainInformation() {
-		WeatherRestClient wc = new WeatherRestClient();
-		String weatherData = null;
-		weatherData = wc.getForcastWeatherInformation("San%20Francisco");
-
-		System.out.println("****** forecast ");
-
-		System.out.println(weatherData);
-		double rain = 0;
-		if (weatherData != null) {
-			try {
-				JSONObject json = new JSONObject(weatherData);
-				JSONObject list = json.getJSONArray("list").getJSONObject(0);
-
-				if (list.has("rain")) {
-
-					rain = list.getJSONObject("rain").getDouble("3h");
-				}
-
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-		}
-		return rain;
-	}
-
-	private WeatherInformation getWeatherInformation() {
-		WeatherRestClient wc = new WeatherRestClient();
-		WeatherInformation weatherInformation = new WeatherInformation();
-		String weatherData = null;
-		weatherData = wc.getCurrentWeatherInformation("San%20Francisco");
-		System.out.println(weatherData);
-		double temp = 70;
-		double humidity = 50;
-		double windSpeed = 2;
-		double rain = 0;
-		if (weatherData != null) {
-			try {
-				JSONObject json = new JSONObject(weatherData);
-				temp = json.getJSONObject("main").getDouble("temp");
-				humidity = json.getJSONObject("main").getDouble("humidity");
-				windSpeed = json.getJSONObject("wind").getDouble("speed");
-				if (json.has("rain"))
-					rain = json.getJSONObject("rain").getDouble("3h");
-				System.out.println("temp " + temp + " windspeed " + windSpeed
-						+ " rain " + rain);
-				weatherInformation.setTemp(temp);
-				weatherInformation.setHumidity(humidity);
-				weatherInformation.setWindSpeed(windSpeed);
-				weatherInformation.setRain(rain);
-
-				return weatherInformation;
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		return null;
-	}
-
-	@SuppressWarnings({ "nls", "unchecked" })
-	private void createMetrics() {
-		double moisture = 21;
-
-		while (true) {
-			int loopcount = 0;
 	
-			// decrement moisture level
-			while (moisture > 20) {
-				WeatherInformation weatherInformation = getWeatherInformation();
-				moisture = decrementMoistureLevel(moisture, weatherInformation);
-
-				try {
-					Thread.sleep(SLEEP_PERIOD_SPRINKLER_OFF);
-					log.debug("sleeping for 10 minutes ***********" + moisture);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}// end of inner loop one sprinkler cycle
-			loopcount++;
-			log.debug("loopcount: " + loopcount);
-			// TODO : trigger sprinkler
-
-			double rain = getForecastRainInformation();
-			int threshold = 100;
-			if (rain > 0) {
-				// increment moisture
-				threshold = 50;
-
-				while (moisture <= threshold) {
-					this.timeseriesFactory.create(getInsertionData(moisture,
-							"ON"));
-					moisture += 4;
-
-					// sleep for 1 minute
-					try {
-						Thread.sleep(SLEEP_PERIOD_SPRINKLER_ON);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				} // inner while loop
-			}
-		}// endless loop
-	}
-
-	private double decrementMoistureLevel(double moisture,
-			WeatherInformation weatherInformation) {
-		// TODO Auto-generated method stub
-		double evaporationRate = getEvaporationRate(weatherInformation);
-
-		this.timeseriesFactory.create(getInsertionData(moisture, "OFF"));
-		// sleep for 10 minutes
-
-		// check if it is raining
-		if (weatherInformation.getRain() > 0) {
-			// increment moisture when raining
-			double moistureIncrease = getIncreaseMoistureInRain(weatherInformation);
-			return (moisture + moistureIncrease) > 100 ? 100
-					: (moisture + moistureIncrease);
-		} else {
-			// decrement the moisture
-			return moisture - evaporationRate;
-		}
-
-	}
+	
+	
+	
 
 	private DatapointsIngestion getInsertionData(double moisture, String status) {
 		DatapointsIngestion dpIngestion = new DatapointsIngestion();
@@ -371,11 +312,6 @@ public class WindDataImpl implements WindDataAPI {
 		return dpIngestion;
 	}
 
-	private double getIncreaseMoistureInRain(
-			WeatherInformation weatherInformation) {
-		// TODO Auto-generated method stub
-		return weatherInformation.getRain() / 25 * 10;
-	}
 
 	// create data to be inserted in timeSeries
 	private Body getDataPoints(String type, double moisture, String status) {
@@ -478,6 +414,31 @@ public class WindDataImpl implements WindDataAPI {
 					((GzipDecompressingEntity) entity).getContent(), "UTF-8");
 		}
 		return EntityUtils.toString(entity);
+	}
+
+
+
+	@Override
+	public Response greetings() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+
+	@Override
+	public Response getYearlyWindDataPoints(String id, String authorization,
+			String starttime, String tagLimit, String tagorder) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+
+	@Override
+	public Response getLatestWindDataPoints(String id, String authorization) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

@@ -1,8 +1,8 @@
 #inherit: base-manifest.yml 
 applications:
-  - name: swati-winddata-timeseries-service
+  - name: analytic_connector
     buildpack: java_buildpack
-    path: target/winddata-timeseries-service-1.1.10.jar
+    path: target/analytic_connector-1.1.10.jar
     memory: 256M
     services:
       - SFSU-UAA-instance
