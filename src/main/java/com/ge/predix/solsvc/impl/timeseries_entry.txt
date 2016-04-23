@@ -1,0 +1,43 @@
+{
+  "tags": [
+    {
+      "name": "Soil-Moisture",
+      "results": [
+        {
+          "groups": [
+            {
+              "name": "type",
+              "type": "number-GOOD"
+            },
+            {
+              "name": "quality",
+              "value": 3
+            }
+          ],
+          "filters": {
+            "attributes": {
+              "Lawn-Type": [
+                "Cox-Statidium"
+              ]
+            }
+          },
+          "attributes": {
+            "Lawn-Type": [
+              "Cox-Statidium"
+            ]
+          },
+          "values": [
+            [
+              1460778905956,
+              20.800000000000125,
+              3
+            ]
+          ]
+        }
+      ],
+      "stats": {
+        "rawCount": 1
+      }
+    }
+  ]
+}

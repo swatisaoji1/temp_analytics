@@ -6,22 +6,18 @@ import org.apache.http.Header;
 
 public class AnalyticAPI {
 	private final String ANALYTIC_ZONE_ID = "491636b4-4769-4863-8999-1fc0a3498e60";
-	private final String CATALOG_ENTRY_ID = "7805917d-71cf-489f-b1d0-2a14ebfe393b";
-	//private final String CATALOG_ENTRY_ID = "f9f2194c-0951-4d92-a24e-a415424991b3";
+	private final String CATALOG_ENTRY_ID = "df3a3f5e-46d6-44c1-ae16-4026a1157f73";
 	private final String baseURI = "https://predix-analytics-catalog-release.run.aws-usw02-pr.ice.predix.io";
 	
 	
 	
-	
-	
-	
 	public String getListOfAnalyticsURI(){
-		//https://predix-analytics-catalog-release.run.aws-usw02-pr.ice.predix.io/api/v1/catalog/analytics
+	
 		return (baseURI + "/api/v1/catalog/analytics");	
 	}
 	
 	public String getRunAnalyticURI(){
-		//https://predix-analytics-catalog-release.run.aws-usw02-pr.ice.predix.io/api/v1/catalog/analytics/<analyticCatalogEntryId-goes-here>/validation
+		
 		return (baseURI + "/api/v1/catalog/analytics/" + CATALOG_ENTRY_ID + "/execution");	
 	}
 	
