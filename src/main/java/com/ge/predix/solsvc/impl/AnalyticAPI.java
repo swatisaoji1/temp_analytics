@@ -6,7 +6,7 @@ import org.apache.http.Header;
 
 public class AnalyticAPI {
 	private final String ANALYTIC_ZONE_ID = "491636b4-4769-4863-8999-1fc0a3498e60";
-	private final String CATALOG_ENTRY_ID = "df3a3f5e-46d6-44c1-ae16-4026a1157f73";
+	private final String CATALOG_ENTRY_ID = "b66d6ed9-f299-430a-8b30-cd43ebb20fc1";
 	private final String baseURI = "https://predix-analytics-catalog-release.run.aws-usw02-pr.ice.predix.io";
 	
 	
